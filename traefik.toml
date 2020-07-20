@@ -1,0 +1,37 @@
+defaultEntryPoints = ["https", "http"]
+
+[entryPoints]
+  [entryPoints.traefik]
+    address = ":9090"
+    [entryPoints.traefik.auth]
+      [entryPoints.traefik.auth.basic]
+        # create Dashboard User http://www.htaccesstools.com/htpasswd-generator/
+        users = ["sample:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
+  [entryPoints.http]
+    address = ":80"
+    [entryPoints.http.redirect]
+      entryPoint = "https"
+  [entryPoints.https]
+    address = ":443"
+  [entryPoints.https.tls]
+
+[retry]
+
+[api]
+
+[acme]
+  # your e-mail address
+  email = "sample@gmail.com"
+  storage = "acme.json"
+  # let's encrypt server
+#  caServer = 'https://acme-v02.api.letsencrypt.org/directory' # production
+  caServer = 'https://acme-staging-v02.api.letsencrypt.org/directory' # staging
+  entryPoint = "https"
+  onHostRule = true
+  [acme.httpChallenge]
+    entryPoint = "http"
+  
+[docker]
+  endpoint = "unix:///var/run/docker.sock"
+  watch = true
+  exposedbydefault = false

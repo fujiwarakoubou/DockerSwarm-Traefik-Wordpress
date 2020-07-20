@@ -1,0 +1,82 @@
+version: "3"
+
+services:
+
+  traefik:
+    image: traefik:v1.7
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+         constraints: [node.role == manager]
+    ports:
+      - 80:80
+      - 443:443
+      - 9090:9090
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./traefik.toml:/etc/traefik/traefik.toml"
+      - "./acme.json:/etc/traefik/acme.json"
+    networks:
+      - web
+      
+  db:
+    image: mysql:5.7
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD: rootpasswd
+    volumes:
+      - "./mysql:/var/lib/mysql"
+    networks:
+      - backend
+
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    deploy:
+      mode: replicated
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 2s
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    volumes:
+      - "./www:/var/www/html"
+    networks:
+      - web
+      - backend
+    labels:
+      - "traefik.docker.network=web"
+      # your site domain
+      - "traefik.frontend.rule=Host:sample.xxx,www.sample.xxx"
+      - "traefik.enable=true"
+      - "traefik.port=80"
+      # swarm option
+      - "traefik.docker.swarmmode=true"
+      - "traefik.backend.loadbalancer.stickiness=true"
+      - "traefik.backend.loadbalancer.swarm=true"
+
+networks:
+  web:
+    external: true
+  backend:
